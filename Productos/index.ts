@@ -19,11 +19,12 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
     
     private _currentBaseNameSuggestion: string = "";
     
-    private readonly VERSION = "v0.0.10";
+    private readonly VERSION = "v0.0.16";
 
     // =======================================================================
     // NOMBRES LÓGICOS
     // =======================================================================
+    private readonly LOGICAL_NAME_PADRE_ENTIDAD = "sec_productodeproyecto"; 
     private readonly LOGICAL_NAME_NOMBRE_PADRE = "sec_nombre"; 
     private readonly LOGICAL_NAME_NUMERO_PRODUCTO = "a_268d74c4a6744c079367357c0ab2686a.productnumber"; 
     private readonly LOGICAL_NAME_PRODUCTO_ASOCIADO_NOMBRE = "sec_productoid"; 
@@ -111,7 +112,7 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
                 this._productCounts = newCounts;
                 this.renderLeftPanel(dataset);
             })
-            .catch(err => {
+            .catch((err: any) => {
                 console.error("Error al obtener conteos agregados", err);
                 this.renderLeftPanel(dataset);
             });
@@ -120,10 +121,26 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
     private renderLeftPanel(dataset: ComponentFramework.PropertyTypes.DataSet): void {
         this._leftPanel.innerHTML = ""; 
 
+        // Leer parámetro de configuración de edición
+        const allowEdit = (this._context.parameters as any).allowEdit?.raw === true || (this._context.parameters as any).allowEdit?.raw === "true";
+
+        const headerContainer = document.createElement("div");
+        headerContainer.className = "pcf-left-header";
+        
         const title = document.createElement("h3");
         title.className = "pcf-left-title";
         title.innerText = "Productos de Proyecto";
-        this._leftPanel.appendChild(title);
+        
+        const btnAdd = document.createElement("button");
+        btnAdd.type = "button"; 
+        btnAdd.className = "pcf-btn-add";
+        btnAdd.innerText = "+ Nuevo";
+        btnAdd.title = "Crear nuevo Producto de Proyecto";
+        btnAdd.onclick = () => this.openNewRecordModal();
+
+        headerContainer.appendChild(title);
+        headerContainer.appendChild(btnAdd);
+        this._leftPanel.appendChild(headerContainer);
 
         dataset.sortedRecordIds.forEach(recordId => {
             const record = dataset.records[recordId];
@@ -143,9 +160,28 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
                 card.classList.add("selected");
             }
 
+            const cardHeader = document.createElement("div");
+            cardHeader.className = "pcf-card-header";
+
             const cardTitle = document.createElement("div");
             cardTitle.className = "pcf-card-title";
             cardTitle.innerText = nombre;
+
+            cardHeader.appendChild(cardTitle);
+
+            // Añadir botón de editar solo si el parámetro en la configuración lo permite
+            if (allowEdit) {
+                const btnEdit = document.createElement("button");
+                btnEdit.type = "button";
+                btnEdit.className = "pcf-btn-edit";
+                btnEdit.innerHTML = "&#9998;"; 
+                btnEdit.title = "Editar Producto de Proyecto";
+                btnEdit.onclick = (e) => {
+                    e.stopPropagation(); 
+                    this.openEditRecordModal(recordId);
+                };
+                cardHeader.appendChild(btnEdit);
+            }
 
             const cardQty = document.createElement("div");
             cardQty.className = "pcf-qty-badge";
@@ -163,7 +199,7 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
             cardNum.className = "pcf-card-num";
             cardNum.innerText = `${nombreAsociado} (#${numeroProducto})`;
 
-            card.appendChild(cardTitle);
+            card.appendChild(cardHeader);
             card.appendChild(cardQty);
             card.appendChild(cardNum);
 
@@ -196,7 +232,7 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
                 this._currentLines = response.entities;
                 this.renderRightPanel();
             },
-            (error) => {
+            (error: any) => {
                 console.error("Error al recuperar líneas", error);
                 this._rightPanel.innerHTML = "Error al cargar las líneas.";
             }
@@ -231,12 +267,14 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
             btnsContainer.className = "pcf-btns-container";
 
             const btnCreateOne = document.createElement("button");
+            btnCreateOne.type = "button"; 
             btnCreateOne.className = "pcf-btn pcf-btn-secondary";
             btnCreateOne.innerText = "Crear línea (1)";
             btnCreateOne.onclick = () => this.createLines(nameInput.value, 1);
             btnsContainer.appendChild(btnCreateOne);
 
             const btnCreateAll = document.createElement("button");
+            btnCreateAll.type = "button"; 
             btnCreateAll.className = "pcf-btn pcf-btn-primary";
             btnCreateAll.innerText = `Crear faltantes (${missing})`;
             btnCreateAll.onclick = () => this.createLines(nameInput.value, missing);
@@ -252,7 +290,6 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
 
         this._rightPanel.appendChild(controlsDiv);
 
-        // Cabecera de la tabla de líneas (Visible solo si hay líneas)
         if (this._currentLines.length > 0) {
             const headerRow = document.createElement("div");
             headerRow.className = "pcf-lines-header";
@@ -283,12 +320,10 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
             const li = document.createElement("li");
             li.className = "pcf-line-item";
 
-            // 0. Columna Numérica (Orden)
             const numSpan = document.createElement("span");
             numSpan.className = "pcf-line-num";
             numSpan.innerText = (index + 1).toString();
 
-            // 1. Campo Nombre Editable
             const nameInput = document.createElement("input");
             nameInput.type = "text";
             nameInput.className = "pcf-input pcf-line-name-input";
@@ -308,7 +343,7 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
                             linea[this.LOGICAL_NAME_NOMBRE_HIJO] = newVal; 
                             setTimeout(() => nameInput.classList.remove("saved"), 1500);
                         })
-                        .catch(e => {
+                        .catch((e: any) => {
                             nameInput.classList.remove("saving");
                             nameInput.classList.add("error");
                             console.error("Error actualizando Nombre", e);
@@ -316,7 +351,6 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
                 }
             };
 
-            // 2. Insignia de Estado 
             const estadoSpan = document.createElement("span");
             estadoSpan.className = "pcf-estado-badge";
             const estadoLabel = linea[`${this.LOGICAL_NAME_ESTADO_PRODUCTO}@OData.Community.Display.V1.FormattedValue`] || linea[this.LOGICAL_NAME_ESTADO_PRODUCTO] || "Sin estado";
@@ -330,7 +364,6 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
             estadoSpan.style.backgroundColor = `hsl(${hue}, 70%, 90%)`;
             estadoSpan.style.color = `hsl(${hue}, 80%, 30%)`;
 
-            // 3. Campo Número de Serie Editable
             const serialInput = document.createElement("input");
             serialInput.type = "text";
             serialInput.className = "pcf-input pcf-serial-input";
@@ -350,7 +383,7 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
                             linea[this.LOGICAL_NAME_NUMERO_SERIE] = newVal; 
                             setTimeout(() => serialInput.classList.remove("saved"), 1500);
                         })
-                        .catch(e => {
+                        .catch((e: any) => {
                             serialInput.classList.remove("saving");
                             serialInput.classList.add("error");
                             console.error("Error actualizando Nº serie", e);
@@ -425,10 +458,58 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
             const dataset = this._context.parameters.projectProductsDataset;
             this.fetchCounts(dataset); 
             
-        }).catch(error => {
+        }).catch((error: any) => {
             console.error("Error al crear líneas", error);
             alert("Error al crear líneas. Revisa la consola.");
         });
+    }
+
+    // =======================================================================
+    // LÓGICA DE FORMULARIOS NATIVOS DATAVERSE
+    // =======================================================================
+    private openNewRecordModal(): void {
+        const entityFormOptions: ComponentFramework.NavigationApi.EntityFormOptions = {
+            entityName: this.LOGICAL_NAME_PADRE_ENTIDAD,
+            useQuickCreateForm: true 
+        };
+
+        const formParameters: any = {};
+        
+        // Obtener el contexto de la página principal (Proyecto)
+        const pageContext = (this._context as any).page;
+        if (pageContext && pageContext.entityId) {
+            // Mapear el lookup usando id, nombre y tipo 
+            formParameters["sec_proyectoid"] = pageContext.entityId;
+            formParameters["sec_proyectoidname"] = pageContext.primaryFieldValue || "Proyecto Actual";
+            formParameters["sec_proyectoidtype"] = pageContext.entityTypeName || "sec_proyecto";
+        }
+
+        this._context.navigation.openForm(entityFormOptions, formParameters).then(
+            (success) => {
+                this._context.parameters.projectProductsDataset.refresh();
+            },
+            (error: any) => {
+                console.error("Error al abrir formulario de nuevo registro", error);
+            }
+        );
+    }
+
+    private openEditRecordModal(recordId: string): void {
+        const entityFormOptions: ComponentFramework.NavigationApi.EntityFormOptions = {
+            entityName: this.LOGICAL_NAME_PADRE_ENTIDAD,
+            entityId: recordId,
+            openInNewWindow: true,
+            windowPosition: 1 
+        };
+
+        this._context.navigation.openForm(entityFormOptions).then(
+            (success) => {
+                this._context.parameters.projectProductsDataset.refresh();
+            },
+            (error: any) => {
+                console.error("Error al abrir formulario de edición", error);
+            }
+        );
     }
 
     public getOutputs(): IOutputs {
