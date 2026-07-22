@@ -17,19 +17,23 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
     private _productCounts: Record<string, number> = {};
     private _lastDatasetIds: string = "";
     
-    private readonly VERSION = "v0.0.6";
+    private _currentBaseNameSuggestion: string = "";
+    
+    private readonly VERSION = "v0.0.9";
 
     // =======================================================================
     // NOMBRES LÓGICOS
     // =======================================================================
     private readonly LOGICAL_NAME_NOMBRE_PADRE = "sec_nombre"; 
-    // Utiliza el alias del link-entity para leer campos de tablas relacionadas
     private readonly LOGICAL_NAME_NUMERO_PRODUCTO = "a_268d74c4a6744c079367357c0ab2686a.productnumber"; 
+    // Al ser un campo lookup, su valor formateado es el nombre principal
+    private readonly LOGICAL_NAME_PRODUCTO_ASOCIADO_NOMBRE = "sec_productoid"; 
     private readonly LOGICAL_NAME_CANTIDAD_ESTIMADA = "sec_cantidadestimada"; 
     
     private readonly LOGICAL_NAME_LINEA_ENTIDAD = "sec_lineadeproductodeproyecto"; 
     private readonly LOGICAL_NAME_NOMBRE_HIJO = "sec_name"; 
     private readonly LOGICAL_NAME_NUMERO_SERIE = "sec_numerodeserie";
+    private readonly LOGICAL_NAME_ESTADO_PRODUCTO = "sec_estadodelproducto";
     
     private readonly LOGICAL_NAME_LOOKUP_PRODUCTO = "sec_productodeproyectoid"; 
     private readonly LOGICAL_NAME_ENTIDAD_PADRE_PLURAL = "sec_productodeproyectos"; 
@@ -66,7 +70,6 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
 
         const currentIds = dataset.sortedRecordIds.join(",");
         
-        // Solo lanzamos la consulta agregada si la lista de IDs mostrada ha cambiado
         if (currentIds !== this._lastDatasetIds && dataset.sortedRecordIds.length > 0) {
             this._lastDatasetIds = currentIds;
             this.fetchCounts(dataset);
@@ -119,6 +122,7 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
         this._leftPanel.innerHTML = ""; 
 
         const title = document.createElement("h3");
+        title.className = "pcf-left-title";
         title.innerText = "Productos de Proyecto";
         this._leftPanel.appendChild(title);
 
@@ -127,6 +131,8 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
 
             const nombre = record.getFormattedValue(this.LOGICAL_NAME_NOMBRE_PADRE) || "Sin nombre";
             const numeroProducto = record.getFormattedValue(this.LOGICAL_NAME_NUMERO_PRODUCTO) || "--";
+            const nombreAsociado = record.getFormattedValue(this.LOGICAL_NAME_PRODUCTO_ASOCIADO_NOMBRE) || "--";
+            
             const cantidadEstimadaStr = record.getValue(this.LOGICAL_NAME_CANTIDAD_ESTIMADA);
             const cantidadEstimada = cantidadEstimadaStr ? parseInt(cantidadEstimadaStr as string, 10) : 0;
             const cantidadCreada = this._productCounts[recordId] !== undefined ? this._productCounts[recordId] : 0;
@@ -134,40 +140,38 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
             const card = document.createElement("div");
             card.className = "pcf-card";
             
-            if (cantidadCreada < cantidadEstimada) {
-                card.classList.add("count-low");
-            } else if (cantidadCreada === cantidadEstimada) {
-                card.classList.add("count-exact");
-            } else {
-                card.classList.add("count-high");
-            }
-
             if (this._selectedProductId === recordId) {
                 card.classList.add("selected");
             }
 
-            const cardHeader = document.createElement("div");
-            cardHeader.className = "pcf-card-header";
-            
-            const cardTitle = document.createElement("span");
+            const cardTitle = document.createElement("div");
             cardTitle.className = "pcf-card-title";
             cardTitle.innerText = nombre;
 
-            const cardNum = document.createElement("span");
-            cardNum.className = "pcf-card-num";
-            cardNum.innerText = `#${numeroProducto}`;
-
-            cardHeader.appendChild(cardTitle);
-            cardHeader.appendChild(cardNum);
-
             const cardQty = document.createElement("div");
-            cardQty.className = "pcf-card-qty";
-            cardQty.innerText = `Líneas: ${cantidadCreada} / Estimadas: ${cantidadEstimada}`;
+            cardQty.className = "pcf-qty-badge";
+            cardQty.innerText = `Líneas creadas: ${cantidadCreada} / Estimadas: ${cantidadEstimada}`;
+            
+            if (cantidadCreada < cantidadEstimada) {
+                cardQty.classList.add("low");
+            } else if (cantidadCreada === cantidadEstimada) {
+                cardQty.classList.add("exact");
+            } else {
+                cardQty.classList.add("high");
+            }
 
-            card.appendChild(cardHeader);
+            const cardNum = document.createElement("div");
+            cardNum.className = "pcf-card-num";
+            cardNum.innerText = `${nombreAsociado} (#${numeroProducto})`;
+
+            card.appendChild(cardTitle);
             card.appendChild(cardQty);
+            card.appendChild(cardNum);
 
             card.onclick = () => {
+                if (this._selectedProductId !== recordId) {
+                    this._currentBaseNameSuggestion = ""; 
+                }
                 this._selectedProductId = recordId;
                 this._selectedProductEstimatedQty = cantidadEstimada;
                 this.renderLeftPanel(dataset); 
@@ -204,6 +208,7 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
         this._rightPanel.innerHTML = "";
 
         const title = document.createElement("h3");
+        title.className = "pcf-right-title";
         title.innerText = "Líneas de Producto Asociadas";
         this._rightPanel.appendChild(title);
 
@@ -213,19 +218,37 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
         const controlsDiv = document.createElement("div");
         controlsDiv.className = "pcf-right-controls";
 
-        const nameInput = document.createElement("input");
-        nameInput.type = "text";
-        nameInput.className = "pcf-name-input";
-        nameInput.placeholder = "Nombre base (ej. Cámara)";
-        
-        controlsDiv.appendChild(nameInput);
-
         if (missing > 0) {
-            const btnCreate = document.createElement("button");
-            btnCreate.className = "pcf-btn-create";
-            btnCreate.innerText = `Crear faltantes (${missing})`;
-            btnCreate.onclick = () => this.createMissingLines(nameInput.value, missing);
-            controlsDiv.appendChild(btnCreate);
+            const nameInput = document.createElement("input");
+            nameInput.type = "text";
+            nameInput.className = "pcf-input pcf-name-input";
+            nameInput.placeholder = "Nombre base (ej. Cámara)";
+            if (this._currentBaseNameSuggestion) {
+                nameInput.value = this._currentBaseNameSuggestion;
+            }
+            controlsDiv.appendChild(nameInput);
+
+            const btnsContainer = document.createElement("div");
+            btnsContainer.className = "pcf-btns-container";
+
+            const btnCreateOne = document.createElement("button");
+            btnCreateOne.className = "pcf-btn pcf-btn-secondary";
+            btnCreateOne.innerText = "Crear línea (1)";
+            btnCreateOne.onclick = () => this.createLines(nameInput.value, 1);
+            btnsContainer.appendChild(btnCreateOne);
+
+            const btnCreateAll = document.createElement("button");
+            btnCreateAll.className = "pcf-btn pcf-btn-primary";
+            btnCreateAll.innerText = `Crear faltantes (${missing})`;
+            btnCreateAll.onclick = () => this.createLines(nameInput.value, missing);
+            btnsContainer.appendChild(btnCreateAll);
+
+            controlsDiv.appendChild(btnsContainer);
+        } else {
+            const successMsg = document.createElement("span");
+            successMsg.className = "pcf-success-msg";
+            successMsg.innerText = "✓ Cantidad estimada alcanzada";
+            controlsDiv.appendChild(successMsg);
         }
 
         this._rightPanel.appendChild(controlsDiv);
@@ -237,13 +260,53 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
             const li = document.createElement("li");
             li.className = "pcf-line-item";
 
-            const nameSpan = document.createElement("span");
-            nameSpan.className = "pcf-line-name";
-            nameSpan.innerText = linea[this.LOGICAL_NAME_NOMBRE_HIJO] || "Sin nombre";
+            // 1. Campo Nombre Editable
+            const nameInput = document.createElement("input");
+            nameInput.type = "text";
+            nameInput.className = "pcf-input pcf-line-name-input";
+            nameInput.value = linea[this.LOGICAL_NAME_NOMBRE_HIJO] || "";
+            nameInput.placeholder = "Nombre";
 
+            nameInput.onblur = () => {
+                const newVal = nameInput.value.trim();
+                const oldVal = linea[this.LOGICAL_NAME_NOMBRE_HIJO] || "";
+                if (newVal !== oldVal) {
+                    nameInput.classList.add("saving");
+                    const data = { [this.LOGICAL_NAME_NOMBRE_HIJO]: newVal };
+                    this._context.webAPI.updateRecord(this.LOGICAL_NAME_LINEA_ENTIDAD, linea[this.LOGICAL_NAME_LINEA_ENTIDAD + "id"], data)
+                        .then(() => {
+                            nameInput.classList.remove("saving");
+                            nameInput.classList.add("saved");
+                            linea[this.LOGICAL_NAME_NOMBRE_HIJO] = newVal; 
+                            setTimeout(() => nameInput.classList.remove("saved"), 1500);
+                        })
+                        .catch(e => {
+                            nameInput.classList.remove("saving");
+                            nameInput.classList.add("error");
+                            console.error("Error actualizando Nombre", e);
+                        });
+                }
+            };
+
+            // 2. Insignia de Estado (con color pastel dinámico)
+            const estadoSpan = document.createElement("span");
+            estadoSpan.className = "pcf-estado-badge";
+            const estadoLabel = linea[`${this.LOGICAL_NAME_ESTADO_PRODUCTO}@OData.Community.Display.V1.FormattedValue`] || linea[this.LOGICAL_NAME_ESTADO_PRODUCTO] || "Sin estado";
+            estadoSpan.innerText = estadoLabel;
+            
+            // Generador de color pastel basado en el texto
+            let hash = 0;
+            for (let i = 0; i < estadoLabel.length; i++) {
+                hash = estadoLabel.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const hue = Math.abs(hash % 360);
+            estadoSpan.style.backgroundColor = `hsl(${hue}, 70%, 90%)`;
+            estadoSpan.style.color = `hsl(${hue}, 80%, 30%)`;
+
+            // 3. Campo Número de Serie Editable
             const serialInput = document.createElement("input");
             serialInput.type = "text";
-            serialInput.className = "pcf-serial-input";
+            serialInput.className = "pcf-input pcf-serial-input";
             serialInput.placeholder = "Nº Serie";
             serialInput.value = linea[this.LOGICAL_NAME_NUMERO_SERIE] || "";
             
@@ -268,7 +331,8 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
                 }
             };
 
-            li.appendChild(nameSpan);
+            li.appendChild(nameInput);
+            li.appendChild(estadoSpan);
             li.appendChild(serialInput);
             list.appendChild(li);
         });
@@ -276,23 +340,26 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
         this._rightPanel.appendChild(list);
     }
 
-    private createMissingLines(baseText: string, missingCount: number): void {
-        if (!this._selectedProductId || missingCount <= 0) return;
+    private createLines(baseText: string, countToCreate: number): void {
+        if (!this._selectedProductId || countToCreate <= 0) return;
 
-        let baseName = baseText.trim() || "Nueva línea";
+        if (!baseText || baseText.trim() === "") {
+            alert("Por favor, complete el Nombre base para poder crear líneas.");
+            return;
+        }
+
+        let baseName = baseText.trim();
         let prefix = baseName;
-        let startNum = 1;
-
+        
         const match = baseName.match(/^(.*?)(\s*\d+)$/);
         if (match) {
             prefix = match[1].trim();
-            startNum = parseInt(match[2].trim(), 10);
         }
 
-        let maxNum = startNum - 1;
-        const existingNames = this._currentLines.map(l => l[this.LOGICAL_NAME_NOMBRE_HIJO] || "");
+        let maxNum = 0;
         
-        existingNames.forEach(n => {
+        this._currentLines.forEach(l => {
+            const n = l[this.LOGICAL_NAME_NOMBRE_HIJO] || "";
             if (n === prefix) {
                 maxNum = Math.max(maxNum, 1);
             } else if (n.startsWith(prefix + " ")) {
@@ -301,34 +368,37 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
                 if (!isNaN(parsed)) {
                     maxNum = Math.max(maxNum, parsed);
                 }
+            } else if (n === baseName && match) {
+                maxNum = Math.max(maxNum, parseInt(match[2].trim(), 10));
             }
         });
 
-        let currentNum = maxNum + 1;
+        let currentNum = 1;
+        if (maxNum > 0) {
+            currentNum = maxNum + 1;
+        } else if (match) {
+            currentNum = parseInt(match[2].trim(), 10);
+        }
+
         const promises = [];
 
-        for (let i = 0; i < missingCount; i++) {
+        for (let i = 0; i < countToCreate; i++) {
             const data: any = {};
             data[`${this.LOGICAL_NAME_LOOKUP_PRODUCTO}@odata.bind`] = `/${this.LOGICAL_NAME_ENTIDAD_PADRE_PLURAL}(${this._selectedProductId})`;
-
-            let finalName = prefix;
-            if (currentNum > 1 || baseName.match(/\d+$/)) {
-                 finalName = `${prefix} ${currentNum}`;
-            }
-
-            data[this.LOGICAL_NAME_NOMBRE_HIJO] = finalName;
+            data[this.LOGICAL_NAME_NOMBRE_HIJO] = `${prefix} ${currentNum}`;
             promises.push(this._context.webAPI.createRecord(this.LOGICAL_NAME_LINEA_ENTIDAD, data));
             currentNum++;
         }
 
         Promise.all(promises).then(() => {
+            this._currentBaseNameSuggestion = `${prefix} ${currentNum}`;
             this.loadRightPanel();
             
             const dataset = this._context.parameters.projectProductsDataset;
             this.fetchCounts(dataset); 
             
         }).catch(error => {
-            console.error("Error al crear líneas faltantes", error);
+            console.error("Error al crear líneas", error);
             alert("Error al crear líneas. Revisa la consola.");
         });
     }

@@ -3,90 +3,191 @@
     width: 100%;
     height: 100%;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    position: relative; /* Necesario para ubicar la versión en la esquina */
+    position: relative; 
 }
 
 .pcf-left-panel {
-    flex: 1;
+    flex: 0 0 40%;
+    max-width: 40%;
     border-right: 1px solid #ccc;
-    padding: 15px;
+    padding: 10px; 
     overflow-y: auto;
+    box-sizing: border-box;
 }
 
 .pcf-right-panel {
     flex: 1;
-    padding: 15px;
+    padding: 20px;
     overflow-y: auto;
+    box-sizing: border-box;
 }
 
+/* Tarjetas más oscuras */
 .pcf-card {
-    border: 1px solid #eaeaea;
+    display: flex;
+    flex-direction: column;
+    gap: 4px; 
+    border: 1px solid #dcdcdc; /* Borde levemente más fuerte */
     border-radius: 6px;
-    padding: 12px;
-    margin-bottom: 12px;
+    padding: 8px 12px; 
+    margin-bottom: 8px; 
     cursor: pointer;
-    background-color: #fcfcfc;
-    transition: background-color 0.2s, border-color 0.2s;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    background-color: #f3f2f1; /* Gris claro, superior al blanco anterior */
+    transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 
 .pcf-card:hover {
-    background-color: #f3f2f1;
+    filter: brightness(0.95);
 }
 
 .pcf-card.selected {
-    border-color: #0078d4;
-    background-color: #e1dfdd;
+    border-width: 2px;
+    border-color: #0078d4 !important;
+    background-color: #e1dfdd; /* Un poco más oscuro para resaltar selección */
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
 
 .pcf-card-title {
-    font-weight: 600;
-    margin-bottom: 4px;
+    font-weight: 700;
     font-size: 14px;
+    color: #201f1e;
 }
 
-.pcf-card-qty {
-    font-size: 12px;
+.pcf-qty-badge {
+    display: inline-block;
+    align-self: flex-start;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.pcf-qty-badge.low { background-color: #fde7e9; color: #a4262c; }
+.pcf-qty-badge.exact { background-color: #dff6dd; color: #107c10; }
+.pcf-qty-badge.high { background-color: #fff4ce; color: #8a6d3b; }
+
+.pcf-card-num {
+    font-size: 11px;
     color: #605e5c;
 }
 
-.pcf-lines-list {
-    list-style-type: disc;
-    margin-left: 20px;
-    padding-left: 0;
+/* Panel Derecho */
+.pcf-right-title {
+    margin-top: 0;
+    margin-bottom: 18px; 
 }
 
-.pcf-lines-list li {
-    margin-bottom: 6px;
+.pcf-right-controls {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    margin-bottom: 20px;
+    min-height: 36px; /* Evita saltos de pantalla cuando se oculta el input */
 }
 
-.pcf-status {
-    margin-top: 20px;
-    font-size: 14px;
-    color: #323130;
+.pcf-btns-container {
+    display: flex;
+    gap: 10px;
+    align-items: center;
 }
 
-.pcf-btn-create {
-    margin-top: 12px;
-    padding: 8px 16px;
-    background-color: #0078d4;
-    color: #fff;
-    border: none;
+.pcf-success-msg {
+    color: #107c10;
+    font-weight: 600;
+    font-size: 13px;
+    background-color: #dff6dd;
+    padding: 6px 12px;
+    border-radius: 4px;
+}
+
+/* Inputs generales */
+.pcf-input {
+    padding: 6px 8px;
+    border: 1px solid #d1d1d1;
+    border-radius: 4px;
+    font-size: 13px;
+    font-family: inherit;
+    transition: border-color 0.3s;
+    background-color: #fff;
+}
+
+.pcf-input:focus {
+    outline: none;
+    border-color: #0078d4;
+}
+
+.pcf-name-input {
+    flex: 1;
+    padding: 8px 12px; /* Input superior ligeramente más grande */
+}
+
+.pcf-btn {
+    padding: 8px 14px;
     border-radius: 4px;
     cursor: pointer;
     font-weight: 600;
+    font-size: 13px;
+    white-space: nowrap;
+    transition: background-color 0.2s;
 }
 
-.pcf-btn-create:hover {
-    background-color: #005a9e;
+.pcf-btn-primary { background-color: #0078d4; color: #fff; border: none; }
+.pcf-btn-primary:hover { background-color: #005a9e; }
+.pcf-btn-secondary { background-color: #fff; color: #0078d4; border: 1px solid #0078d4; }
+.pcf-btn-secondary:hover { background-color: #f3f2f1; }
+
+/* Listado Compacto a la izquierda */
+.pcf-lines-list {
+    list-style-type: none;
+    padding-left: 0;
+    margin: 0;
 }
 
-/* Estilos de la versión */
+.pcf-line-item {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 10px; /* Reducido para mayor compacidad */
+    padding: 4px 6px; /* Relleno mínimo */
+    border-bottom: 1px solid #eaeaea;
+}
+
+.pcf-line-item:hover {
+    background-color: #f8f8f8;
+}
+
+/* Inputs de las listas */
+.pcf-line-name-input {
+    flex: 1; /* Ocupa el espacio disponible */
+    min-width: 150px; /* Tamaño mínimo */
+    font-weight: 500;
+}
+
+.pcf-serial-input {
+    width: 140px; /* Ligeramente más corto para equilibrar */
+}
+
+/* Insignia de Estado */
+.pcf-estado-badge {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    border: 1px solid rgba(0,0,0,0.05);
+}
+
+/* Estados de guardado */
+.pcf-input.saving { background-color: #fff8e6; border-color: #ffb900; }
+.pcf-input.saved { background-color: #f2fff2; border-color: #107c10; }
+.pcf-input.error { background-color: #fde7e9; border-color: #a4262c; }
+
 .pcf-version {
     position: absolute;
     bottom: 5px;
     right: 10px;
     font-size: 10px;
     color: #cccccc;
-    pointer-events: none; /* Para que no interfiera si hay clics en esa zona */
+    pointer-events: none;
 }

@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <manifest>
-  <control namespace="sec" constructor="ProjectProductsManager" version="0.0.6" display-name-key="ProjectProductsManager" description-key="Gestor de Productos de Proyecto y sus Líneas" control-type="standard">
+  <control namespace="sec" constructor="ProjectProductsManager" version="0.0.9" display-name-key="ProjectProductsManager" description-key="Gestor de Productos de Proyecto y sus Líneas" control-type="standard">
     <data-set name="projectProductsDataset" display-name-key="Dataset_Display_Key">
     </data-set>
     <feature-usage>
