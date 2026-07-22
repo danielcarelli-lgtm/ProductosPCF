@@ -19,14 +19,13 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
     
     private _currentBaseNameSuggestion: string = "";
     
-    private readonly VERSION = "v0.0.9";
+    private readonly VERSION = "v0.0.10";
 
     // =======================================================================
     // NOMBRES LÓGICOS
     // =======================================================================
     private readonly LOGICAL_NAME_NOMBRE_PADRE = "sec_nombre"; 
     private readonly LOGICAL_NAME_NUMERO_PRODUCTO = "a_268d74c4a6744c079367357c0ab2686a.productnumber"; 
-    // Al ser un campo lookup, su valor formateado es el nombre principal
     private readonly LOGICAL_NAME_PRODUCTO_ASOCIADO_NOMBRE = "sec_productoid"; 
     private readonly LOGICAL_NAME_CANTIDAD_ESTIMADA = "sec_cantidadestimada"; 
     
@@ -253,12 +252,41 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
 
         this._rightPanel.appendChild(controlsDiv);
 
+        // Cabecera de la tabla de líneas (Visible solo si hay líneas)
+        if (this._currentLines.length > 0) {
+            const headerRow = document.createElement("div");
+            headerRow.className = "pcf-lines-header";
+
+            const hNum = document.createElement("span");
+            hNum.innerText = "#";
+            
+            const hName = document.createElement("span");
+            hName.innerText = "Línea de producto";
+            
+            const hState = document.createElement("span");
+            hState.innerText = "Estado";
+            
+            const hSerial = document.createElement("span");
+            hSerial.innerText = "Nº Serie";
+
+            headerRow.appendChild(hNum);
+            headerRow.appendChild(hName);
+            headerRow.appendChild(hState);
+            headerRow.appendChild(hSerial);
+            this._rightPanel.appendChild(headerRow);
+        }
+
         const list = document.createElement("ul");
         list.className = "pcf-lines-list";
 
-        this._currentLines.forEach(linea => {
+        this._currentLines.forEach((linea, index) => {
             const li = document.createElement("li");
             li.className = "pcf-line-item";
+
+            // 0. Columna Numérica (Orden)
+            const numSpan = document.createElement("span");
+            numSpan.className = "pcf-line-num";
+            numSpan.innerText = (index + 1).toString();
 
             // 1. Campo Nombre Editable
             const nameInput = document.createElement("input");
@@ -288,13 +316,12 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
                 }
             };
 
-            // 2. Insignia de Estado (con color pastel dinámico)
+            // 2. Insignia de Estado 
             const estadoSpan = document.createElement("span");
             estadoSpan.className = "pcf-estado-badge";
             const estadoLabel = linea[`${this.LOGICAL_NAME_ESTADO_PRODUCTO}@OData.Community.Display.V1.FormattedValue`] || linea[this.LOGICAL_NAME_ESTADO_PRODUCTO] || "Sin estado";
             estadoSpan.innerText = estadoLabel;
             
-            // Generador de color pastel basado en el texto
             let hash = 0;
             for (let i = 0; i < estadoLabel.length; i++) {
                 hash = estadoLabel.charCodeAt(i) + ((hash << 5) - hash);
@@ -331,6 +358,7 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
                 }
             };
 
+            li.appendChild(numSpan);
             li.appendChild(nameInput);
             li.appendChild(estadoSpan);
             li.appendChild(serialInput);
