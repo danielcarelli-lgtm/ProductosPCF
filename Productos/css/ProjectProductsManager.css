@@ -1,0 +1,92 @@
+.pcf-main-container {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    position: relative; /* Necesario para ubicar la versión en la esquina */
+}
+
+.pcf-left-panel {
+    flex: 1;
+    border-right: 1px solid #ccc;
+    padding: 15px;
+    overflow-y: auto;
+}
+
+.pcf-right-panel {
+    flex: 1;
+    padding: 15px;
+    overflow-y: auto;
+}
+
+.pcf-card {
+    border: 1px solid #eaeaea;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    background-color: #fcfcfc;
+    transition: background-color 0.2s, border-color 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.pcf-card:hover {
+    background-color: #f3f2f1;
+}
+
+.pcf-card.selected {
+    border-color: #0078d4;
+    background-color: #e1dfdd;
+}
+
+.pcf-card-title {
+    font-weight: 600;
+    margin-bottom: 4px;
+    font-size: 14px;
+}
+
+.pcf-card-qty {
+    font-size: 12px;
+    color: #605e5c;
+}
+
+.pcf-lines-list {
+    list-style-type: disc;
+    margin-left: 20px;
+    padding-left: 0;
+}
+
+.pcf-lines-list li {
+    margin-bottom: 6px;
+}
+
+.pcf-status {
+    margin-top: 20px;
+    font-size: 14px;
+    color: #323130;
+}
+
+.pcf-btn-create {
+    margin-top: 12px;
+    padding: 8px 16px;
+    background-color: #0078d4;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.pcf-btn-create:hover {
+    background-color: #005a9e;
+}
+
+/* Estilos de la versión */
+.pcf-version {
+    position: absolute;
+    bottom: 5px;
+    right: 10px;
+    font-size: 10px;
+    color: #cccccc;
+    pointer-events: none; /* Para que no interfiera si hay clics en esa zona */
+}
