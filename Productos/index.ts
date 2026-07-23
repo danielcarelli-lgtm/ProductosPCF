@@ -19,7 +19,7 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
     
     private _currentBaseNameSuggestion: string = "";
     
-    private readonly VERSION = "v0.0.16";
+    private readonly VERSION = "v0.0.17";
 
     // =======================================================================
     // NOMBRES LÓGICOS
@@ -67,6 +67,13 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
         const dataset = context.parameters.projectProductsDataset;
 
         if (dataset.loading) return;
+
+        // Auto-paginación: Si hay más registros que el límite de la vista, los pedimos.
+        // Esto lanzará un nuevo ciclo de updateView hasta que se traigan todos.
+        if (dataset.paging && dataset.paging.hasNextPage) {
+            dataset.paging.loadNextPage();
+            return;
+        }
 
         const currentIds = dataset.sortedRecordIds.join(",");
         
@@ -121,7 +128,6 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
     private renderLeftPanel(dataset: ComponentFramework.PropertyTypes.DataSet): void {
         this._leftPanel.innerHTML = ""; 
 
-        // Leer parámetro de configuración de edición
         const allowEdit = (this._context.parameters as any).allowEdit?.raw === true || (this._context.parameters as any).allowEdit?.raw === "true";
 
         const headerContainer = document.createElement("div");
@@ -169,7 +175,6 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
 
             cardHeader.appendChild(cardTitle);
 
-            // Añadir botón de editar solo si el parámetro en la configuración lo permite
             if (allowEdit) {
                 const btnEdit = document.createElement("button");
                 btnEdit.type = "button";
@@ -464,9 +469,6 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
         });
     }
 
-    // =======================================================================
-    // LÓGICA DE FORMULARIOS NATIVOS DATAVERSE
-    // =======================================================================
     private openNewRecordModal(): void {
         const entityFormOptions: ComponentFramework.NavigationApi.EntityFormOptions = {
             entityName: this.LOGICAL_NAME_PADRE_ENTIDAD,
@@ -475,10 +477,8 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
 
         const formParameters: any = {};
         
-        // Obtener el contexto de la página principal (Proyecto)
         const pageContext = (this._context as any).page;
         if (pageContext && pageContext.entityId) {
-            // Mapear el lookup usando id, nombre y tipo 
             formParameters["sec_proyectoid"] = pageContext.entityId;
             formParameters["sec_proyectoidname"] = pageContext.primaryFieldValue || "Proyecto Actual";
             formParameters["sec_proyectoidtype"] = pageContext.entityTypeName || "sec_proyecto";

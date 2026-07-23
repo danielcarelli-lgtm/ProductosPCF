@@ -1,10 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <manifest>
-  <control namespace="sec" constructor="ProjectProductsManager" version="0.0.16" display-name-key="ProjectProductsManager" description-key="Gestor de Productos de Proyecto y sus Líneas" control-type="standard">
+  <control namespace="sec" constructor="ProjectProductsManager" version="0.0.17" display-name-key="ProjectProductsManager" description-key="Gestor de Productos de Proyecto y sus Líneas" control-type="standard">
     <data-set name="projectProductsDataset" display-name-key="Dataset_Display_Key">
     </data-set>
     
-    <!-- Parámetro para habilitar o deshabilitar la edición -->
     <property name="allowEdit" display-name-key="Permitir Edición" description-key="Mostrar botón para editar productos de proyecto" of-type="TwoOptions" usage="input" default-value="false" />
     
     <feature-usage>
