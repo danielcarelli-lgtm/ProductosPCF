@@ -2,6 +2,12 @@ import {IInputs, IOutputs} from "./generated/ManifestTypes";
 import DataSetInterfaces = ComponentFramework.PropertyHelper.DataSetApi;
 type DataSet = ComponentFramework.WebApi.Entity;
 
+type SortField = "name" | "createdon" | "pending";
+
+interface TranslationDictionary {
+    [key: string]: string;
+}
+
 export class ProjectProductsManager implements ComponentFramework.StandardControl<IInputs, IOutputs> {
 
     private _context: ComponentFramework.Context<IInputs>;
@@ -17,15 +23,117 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
     private _productCounts: Record<string, number> = {};
     private _lastDatasetIds: string = "";
     
+    // Estado de ordenación del panel izquierdo
+    private _sortBy: SortField = "name";
+    private _sortAsc: boolean = true;
+    
     private _currentBaseNameSuggestion: string = "";
     
-    private readonly VERSION = "v0.0.17";
+    private readonly VERSION = "v0.0.19";
+
+    // Diccionario de respaldo por LCID (1034: es-ES, 2070: pt-PT, 1033: en-US)
+    private readonly TRANSLATIONS: Record<number, TranslationDictionary> = {
+        1034: {
+            LeftPanelTitle: "Productos de Proyecto",
+            BtnNew: "+ Nuevo",
+            BtnNewTooltip: "Crear nuevo Producto de Proyecto",
+            SortLabel: "Ordenar:",
+            SortName: "Nombre",
+            SortCreatedOn: "Fecha creación",
+            SortPending: "Pendientes",
+            NoName: "Sin nombre",
+            EditTooltip: "Editar Producto de Proyecto",
+            LinesCreatedBadge: "Líneas creadas: {0} / Estimadas: {1}",
+            LoadingLines: "Cargando líneas...",
+            SelectProductPrompt: "Seleccione un producto para ver sus líneas.",
+            ErrorLoadingLines: "Error al cargar las líneas.",
+            RightPanelTitle: "Líneas de Producto Asociadas",
+            BaseNamePlaceholder: "Nombre base (ej. Cámara)",
+            BtnCreateOne: "Crear línea (1)",
+            BtnCreateMissing: "Crear faltantes ({0})",
+            EstimatedReached: "✓ Cantidad estimada alcanzada",
+            ColLineName: "Línea de producto",
+            ColStatus: "Estado",
+            ColSerial: "Nº Serie",
+            ColLocation: "Ubicación",
+            PlaceholderName: "Nombre",
+            NoStatus: "Sin estado",
+            PlaceholderSerial: "Nº Serie",
+            PlaceholderLocation: "Ubicación",
+            AlertMissingBaseName: "Por favor, complete el Nombre base para poder crear líneas.",
+            AlertErrorCreatingLines: "Error al crear líneas. Revisa la consola.",
+            CurrentProjectFallback: "Proyecto Actual"
+        },
+        2070: {
+            LeftPanelTitle: "Produtos de Projeto",
+            BtnNew: "+ Novo",
+            BtnNewTooltip: "Criar novo Produto de Projeto",
+            SortLabel: "Ordenar:",
+            SortName: "Nome",
+            SortCreatedOn: "Data de criação",
+            SortPending: "Pendentes",
+            NoName: "Sem nome",
+            EditTooltip: "Editar Produto de Projeto",
+            LinesCreatedBadge: "Linhas criadas: {0} / Estimadas: {1}",
+            LoadingLines: "A carregar linhas...",
+            SelectProductPrompt: "Selecione um produto para ver as suas linhas.",
+            ErrorLoadingLines: "Erro ao carregar as linhas.",
+            RightPanelTitle: "Linhas de Produto Associadas",
+            BaseNamePlaceholder: "Nome base (ex. Câmara)",
+            BtnCreateOne: "Criar linha (1)",
+            BtnCreateMissing: "Criar em falta ({0})",
+            EstimatedReached: "✓ Quantidade estimada atingida",
+            ColLineName: "Linha de produto",
+            ColStatus: "Estado",
+            ColSerial: "Nº Série",
+            ColLocation: "Localização",
+            PlaceholderName: "Nome",
+            NoStatus: "Sem estado",
+            PlaceholderSerial: "Nº Série",
+            PlaceholderLocation: "Localização",
+            AlertMissingBaseName: "Por favor, preencha o Nome base para poder criar linhas.",
+            AlertErrorCreatingLines: "Erro ao criar linhas. Verifique a consola.",
+            CurrentProjectFallback: "Projeto Atual"
+        },
+        1033: {
+            LeftPanelTitle: "Project Products",
+            BtnNew: "+ New",
+            BtnNewTooltip: "Create new Project Product",
+            SortLabel: "Sort:",
+            SortName: "Name",
+            SortCreatedOn: "Created date",
+            SortPending: "Pending",
+            NoName: "No name",
+            EditTooltip: "Edit Project Product",
+            LinesCreatedBadge: "Created lines: {0} / Estimated: {1}",
+            LoadingLines: "Loading lines...",
+            SelectProductPrompt: "Select a product to view its lines.",
+            ErrorLoadingLines: "Error loading lines.",
+            RightPanelTitle: "Associated Product Lines",
+            BaseNamePlaceholder: "Base name (e.g. Camera)",
+            BtnCreateOne: "Create line (1)",
+            BtnCreateMissing: "Create missing ({0})",
+            EstimatedReached: "✓ Estimated quantity reached",
+            ColLineName: "Product Line",
+            ColStatus: "Status",
+            ColSerial: "Serial No.",
+            ColLocation: "Location",
+            PlaceholderName: "Name",
+            NoStatus: "No status",
+            PlaceholderSerial: "Serial No.",
+            PlaceholderLocation: "Location",
+            AlertMissingBaseName: "Please fill in the Base name to create lines.",
+            AlertErrorCreatingLines: "Error creating lines. Check the console.",
+            CurrentProjectFallback: "Current Project"
+        }
+    };
 
     // =======================================================================
     // NOMBRES LÓGICOS
     // =======================================================================
     private readonly LOGICAL_NAME_PADRE_ENTIDAD = "sec_productodeproyecto"; 
     private readonly LOGICAL_NAME_NOMBRE_PADRE = "sec_nombre"; 
+    private readonly LOGICAL_NAME_FECHA_CREACION = "createdon";
     private readonly LOGICAL_NAME_NUMERO_PRODUCTO = "a_268d74c4a6744c079367357c0ab2686a.productnumber"; 
     private readonly LOGICAL_NAME_PRODUCTO_ASOCIADO_NOMBRE = "sec_productoid"; 
     private readonly LOGICAL_NAME_CANTIDAD_ESTIMADA = "sec_cantidadestimada"; 
@@ -33,6 +141,7 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
     private readonly LOGICAL_NAME_LINEA_ENTIDAD = "sec_lineadeproductodeproyecto"; 
     private readonly LOGICAL_NAME_NOMBRE_HIJO = "sec_name"; 
     private readonly LOGICAL_NAME_NUMERO_SERIE = "sec_numerodeserie";
+    private readonly LOGICAL_NAME_UBICACION = "sec_descripciondelaubicacion";
     private readonly LOGICAL_NAME_ESTADO_PRODUCTO = "sec_estadodelproducto";
     
     private readonly LOGICAL_NAME_LOOKUP_PRODUCTO = "sec_productodeproyectoid"; 
@@ -40,6 +149,32 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
     // =======================================================================
 
     constructor() {}
+
+    private t(key: string, ...args: (string | number)[]): string {
+        let text = "";
+        try {
+            if (this._context && this._context.resources) {
+                const res = this._context.resources.getString(key);
+                if (res && res !== key) {
+                    text = res;
+                }
+            }
+        } catch {
+            // Ignorar fallo en arnés local y usar diccionario interno
+        }
+
+        if (!text) {
+            const lcid = this._context?.userSettings?.languageId || 1034;
+            const dict = this.TRANSLATIONS[lcid] || this.TRANSLATIONS[1034];
+            text = dict[key] || this.TRANSLATIONS[1034][key] || key;
+        }
+
+        args.forEach((arg, idx) => {
+            text = text.replace(`{${idx}}`, String(arg));
+        });
+
+        return text;
+    }
 
     public init(context: ComponentFramework.Context<IInputs>, notifyOutputChanged: () => void, state: ComponentFramework.Dictionary, container: HTMLDivElement): void {
         this._context = context;
@@ -68,8 +203,7 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
 
         if (dataset.loading) return;
 
-        // Auto-paginación: Si hay más registros que el límite de la vista, los pedimos.
-        // Esto lanzará un nuevo ciclo de updateView hasta que se traigan todos.
+        // Auto-paginación para cargar todos los registros
         if (dataset.paging && dataset.paging.hasNextPage) {
             dataset.paging.loadNextPage();
             return;
@@ -125,33 +259,122 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
             });
     }
 
+    private handleSortChange(field: SortField, dataset: ComponentFramework.PropertyTypes.DataSet): void {
+        if (this._sortBy === field) {
+            this._sortAsc = !this._sortAsc;
+        } else {
+            this._sortBy = field;
+            this._sortAsc = (field === "name");
+        }
+        this.renderLeftPanel(dataset);
+    }
+
+    private getSortedRecordIds(dataset: ComponentFramework.PropertyTypes.DataSet): string[] {
+        const ids = [...dataset.sortedRecordIds];
+
+        ids.sort((idA, idB) => {
+            const recA = dataset.records[idA];
+            const recB = dataset.records[idB];
+
+            let comparison = 0;
+
+            if (this._sortBy === "name") {
+                const nameA = (recA.getFormattedValue(this.LOGICAL_NAME_NOMBRE_PADRE) || "").toLowerCase();
+                const nameB = (recB.getFormattedValue(this.LOGICAL_NAME_NOMBRE_PADRE) || "").toLowerCase();
+                comparison = nameA.localeCompare(nameB);
+            } else if (this._sortBy === "createdon") {
+                const rawDateA = recA.getValue(this.LOGICAL_NAME_FECHA_CREACION) || recA.getFormattedValue(this.LOGICAL_NAME_FECHA_CREACION);
+                const rawDateB = recB.getValue(this.LOGICAL_NAME_FECHA_CREACION) || recB.getFormattedValue(this.LOGICAL_NAME_FECHA_CREACION);
+                const timeA = rawDateA ? new Date(rawDateA as any).getTime() : 0;
+                const timeB = rawDateB ? new Date(rawDateB as any).getTime() : 0;
+                comparison = timeA - timeB;
+            } else if (this._sortBy === "pending") {
+                const estAStr = recA.getValue(this.LOGICAL_NAME_CANTIDAD_ESTIMADA);
+                const estBStr = recB.getValue(this.LOGICAL_NAME_CANTIDAD_ESTIMADA);
+                const estA = estAStr ? parseInt(estAStr as string, 10) : 0;
+                const estB = estBStr ? parseInt(estBStr as string, 10) : 0;
+
+                const creadasA = this._productCounts[idA] !== undefined ? this._productCounts[idA] : 0;
+                const creadasB = this._productCounts[idB] !== undefined ? this._productCounts[idB] : 0;
+
+                const pendingA = estA - creadasA;
+                const pendingB = estB - creadasB;
+                comparison = pendingA - pendingB;
+            }
+
+            return this._sortAsc ? comparison : -comparison;
+        });
+
+        return ids;
+    }
+
     private renderLeftPanel(dataset: ComponentFramework.PropertyTypes.DataSet): void {
+        const previousScrollTop = this._leftPanel.scrollTop;
         this._leftPanel.innerHTML = ""; 
 
         const allowEdit = (this._context.parameters as any).allowEdit?.raw === true || (this._context.parameters as any).allowEdit?.raw === "true";
+
+        // Contenedor fijo superior del panel izquierdo
+        const stickyHeader = document.createElement("div");
+        stickyHeader.className = "pcf-left-sticky-header";
 
         const headerContainer = document.createElement("div");
         headerContainer.className = "pcf-left-header";
         
         const title = document.createElement("h3");
         title.className = "pcf-left-title";
-        title.innerText = "Productos de Proyecto";
+        title.innerText = this.t("LeftPanelTitle");
         
         const btnAdd = document.createElement("button");
         btnAdd.type = "button"; 
         btnAdd.className = "pcf-btn-add";
-        btnAdd.innerText = "+ Nuevo";
-        btnAdd.title = "Crear nuevo Producto de Proyecto";
+        btnAdd.innerText = this.t("BtnNew");
+        btnAdd.title = this.t("BtnNewTooltip");
         btnAdd.onclick = () => this.openNewRecordModal();
 
         headerContainer.appendChild(title);
         headerContainer.appendChild(btnAdd);
-        this._leftPanel.appendChild(headerContainer);
+        stickyHeader.appendChild(headerContainer);
 
-        dataset.sortedRecordIds.forEach(recordId => {
+        // Barra de ordenación dentro de la cabecera fija
+        const sortBar = document.createElement("div");
+        sortBar.className = "pcf-sort-bar";
+
+        const sortLabel = document.createElement("span");
+        sortLabel.className = "pcf-sort-label";
+        sortLabel.innerText = this.t("SortLabel");
+        sortBar.appendChild(sortLabel);
+
+        const sortOptions: { field: SortField; label: string }[] = [
+            { field: "name", label: this.t("SortName") },
+            { field: "createdon", label: this.t("SortCreatedOn") },
+            { field: "pending", label: this.t("SortPending") }
+        ];
+
+        sortOptions.forEach(opt => {
+            const btnSort = document.createElement("button");
+            btnSort.type = "button";
+            btnSort.className = "pcf-btn-sort";
+            if (this._sortBy === opt.field) {
+                btnSort.classList.add("active");
+                const arrow = this._sortAsc ? " ↑" : " ↓";
+                btnSort.innerText = `${opt.label}${arrow}`;
+            } else {
+                btnSort.innerText = opt.label;
+            }
+            btnSort.onclick = () => this.handleSortChange(opt.field, dataset);
+            sortBar.appendChild(btnSort);
+        });
+
+        stickyHeader.appendChild(sortBar);
+        this._leftPanel.appendChild(stickyHeader);
+
+        const sortedIds = this.getSortedRecordIds(dataset);
+
+        sortedIds.forEach(recordId => {
             const record = dataset.records[recordId];
 
-            const nombre = record.getFormattedValue(this.LOGICAL_NAME_NOMBRE_PADRE) || "Sin nombre";
+            const nombre = record.getFormattedValue(this.LOGICAL_NAME_NOMBRE_PADRE) || this.t("NoName");
             const numeroProducto = record.getFormattedValue(this.LOGICAL_NAME_NUMERO_PRODUCTO) || "--";
             const nombreAsociado = record.getFormattedValue(this.LOGICAL_NAME_PRODUCTO_ASOCIADO_NOMBRE) || "--";
             
@@ -180,7 +403,7 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
                 btnEdit.type = "button";
                 btnEdit.className = "pcf-btn-edit";
                 btnEdit.innerHTML = "&#9998;"; 
-                btnEdit.title = "Editar Producto de Proyecto";
+                btnEdit.title = this.t("EditTooltip");
                 btnEdit.onclick = (e) => {
                     e.stopPropagation(); 
                     this.openEditRecordModal(recordId);
@@ -190,7 +413,7 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
 
             const cardQty = document.createElement("div");
             cardQty.className = "pcf-qty-badge";
-            cardQty.innerText = `Líneas creadas: ${cantidadCreada} / Estimadas: ${cantidadEstimada}`;
+            cardQty.innerText = this.t("LinesCreatedBadge", cantidadCreada, cantidadEstimada);
             
             if (cantidadCreada < cantidadEstimada) {
                 cardQty.classList.add("low");
@@ -220,13 +443,15 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
 
             this._leftPanel.appendChild(card);
         });
+
+        this._leftPanel.scrollTop = previousScrollTop;
     }
 
     private loadRightPanel(): void {
-        this._rightPanel.innerHTML = "Cargando líneas...";
+        this._rightPanel.innerHTML = this.t("LoadingLines");
 
         if (!this._selectedProductId) {
-            this._rightPanel.innerHTML = "Seleccione un producto para ver sus líneas.";
+            this._rightPanel.innerHTML = this.t("SelectProductPrompt");
             return;
         }
 
@@ -239,7 +464,7 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
             },
             (error: any) => {
                 console.error("Error al recuperar líneas", error);
-                this._rightPanel.innerHTML = "Error al cargar las líneas.";
+                this._rightPanel.innerHTML = this.t("ErrorLoadingLines");
             }
         );
     }
@@ -247,10 +472,14 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
     private renderRightPanel(): void {
         this._rightPanel.innerHTML = "";
 
+        // Contenedor fijo superior del panel derecho
+        const stickyRightHeader = document.createElement("div");
+        stickyRightHeader.className = "pcf-right-sticky-header";
+
         const title = document.createElement("h3");
         title.className = "pcf-right-title";
-        title.innerText = "Líneas de Producto Asociadas";
-        this._rightPanel.appendChild(title);
+        title.innerText = this.t("RightPanelTitle");
+        stickyRightHeader.appendChild(title);
 
         const count = this._currentLines.length;
         const missing = this._selectedProductEstimatedQty - count;
@@ -262,7 +491,7 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
             const nameInput = document.createElement("input");
             nameInput.type = "text";
             nameInput.className = "pcf-input pcf-name-input";
-            nameInput.placeholder = "Nombre base (ej. Cámara)";
+            nameInput.placeholder = this.t("BaseNamePlaceholder");
             if (this._currentBaseNameSuggestion) {
                 nameInput.value = this._currentBaseNameSuggestion;
             }
@@ -274,14 +503,14 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
             const btnCreateOne = document.createElement("button");
             btnCreateOne.type = "button"; 
             btnCreateOne.className = "pcf-btn pcf-btn-secondary";
-            btnCreateOne.innerText = "Crear línea (1)";
+            btnCreateOne.innerText = this.t("BtnCreateOne");
             btnCreateOne.onclick = () => this.createLines(nameInput.value, 1);
             btnsContainer.appendChild(btnCreateOne);
 
             const btnCreateAll = document.createElement("button");
             btnCreateAll.type = "button"; 
             btnCreateAll.className = "pcf-btn pcf-btn-primary";
-            btnCreateAll.innerText = `Crear faltantes (${missing})`;
+            btnCreateAll.innerText = this.t("BtnCreateMissing", missing);
             btnCreateAll.onclick = () => this.createLines(nameInput.value, missing);
             btnsContainer.appendChild(btnCreateAll);
 
@@ -289,11 +518,11 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
         } else {
             const successMsg = document.createElement("span");
             successMsg.className = "pcf-success-msg";
-            successMsg.innerText = "✓ Cantidad estimada alcanzada";
+            successMsg.innerText = this.t("EstimatedReached");
             controlsDiv.appendChild(successMsg);
         }
 
-        this._rightPanel.appendChild(controlsDiv);
+        stickyRightHeader.appendChild(controlsDiv);
 
         if (this._currentLines.length > 0) {
             const headerRow = document.createElement("div");
@@ -303,20 +532,26 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
             hNum.innerText = "#";
             
             const hName = document.createElement("span");
-            hName.innerText = "Línea de producto";
+            hName.innerText = this.t("ColLineName");
             
             const hState = document.createElement("span");
-            hState.innerText = "Estado";
+            hState.innerText = this.t("ColStatus");
             
             const hSerial = document.createElement("span");
-            hSerial.innerText = "Nº Serie";
+            hSerial.innerText = this.t("ColSerial");
+
+            const hLocation = document.createElement("span");
+            hLocation.innerText = this.t("ColLocation");
 
             headerRow.appendChild(hNum);
             headerRow.appendChild(hName);
             headerRow.appendChild(hState);
             headerRow.appendChild(hSerial);
-            this._rightPanel.appendChild(headerRow);
+            headerRow.appendChild(hLocation);
+            stickyRightHeader.appendChild(headerRow);
         }
+
+        this._rightPanel.appendChild(stickyRightHeader);
 
         const list = document.createElement("ul");
         list.className = "pcf-lines-list";
@@ -325,40 +560,28 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
             const li = document.createElement("li");
             li.className = "pcf-line-item";
 
+            const lineId = linea[this.LOGICAL_NAME_LINEA_ENTIDAD + "id"];
+
+            // 0. Orden
             const numSpan = document.createElement("span");
             numSpan.className = "pcf-line-num";
             numSpan.innerText = (index + 1).toString();
 
+            // 1. Nombre Editable
             const nameInput = document.createElement("input");
             nameInput.type = "text";
             nameInput.className = "pcf-input pcf-line-name-input";
             nameInput.value = linea[this.LOGICAL_NAME_NOMBRE_HIJO] || "";
-            nameInput.placeholder = "Nombre";
+            nameInput.placeholder = this.t("PlaceholderName");
 
             nameInput.onblur = () => {
-                const newVal = nameInput.value.trim();
-                const oldVal = linea[this.LOGICAL_NAME_NOMBRE_HIJO] || "";
-                if (newVal !== oldVal) {
-                    nameInput.classList.add("saving");
-                    const data = { [this.LOGICAL_NAME_NOMBRE_HIJO]: newVal };
-                    this._context.webAPI.updateRecord(this.LOGICAL_NAME_LINEA_ENTIDAD, linea[this.LOGICAL_NAME_LINEA_ENTIDAD + "id"], data)
-                        .then(() => {
-                            nameInput.classList.remove("saving");
-                            nameInput.classList.add("saved");
-                            linea[this.LOGICAL_NAME_NOMBRE_HIJO] = newVal; 
-                            setTimeout(() => nameInput.classList.remove("saved"), 1500);
-                        })
-                        .catch((e: any) => {
-                            nameInput.classList.remove("saving");
-                            nameInput.classList.add("error");
-                            console.error("Error actualizando Nombre", e);
-                        });
-                }
+                this.updateLineField(linea, lineId, this.LOGICAL_NAME_NOMBRE_HIJO, nameInput);
             };
 
+            // 2. Estado
             const estadoSpan = document.createElement("span");
             estadoSpan.className = "pcf-estado-badge";
-            const estadoLabel = linea[`${this.LOGICAL_NAME_ESTADO_PRODUCTO}@OData.Community.Display.V1.FormattedValue`] || linea[this.LOGICAL_NAME_ESTADO_PRODUCTO] || "Sin estado";
+            const estadoLabel = linea[`${this.LOGICAL_NAME_ESTADO_PRODUCTO}@OData.Community.Display.V1.FormattedValue`] || linea[this.LOGICAL_NAME_ESTADO_PRODUCTO] || this.t("NoStatus");
             estadoSpan.innerText = estadoLabel;
             
             let hash = 0;
@@ -369,48 +592,65 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
             estadoSpan.style.backgroundColor = `hsl(${hue}, 70%, 90%)`;
             estadoSpan.style.color = `hsl(${hue}, 80%, 30%)`;
 
+            // 3. Nº Serie Editable
             const serialInput = document.createElement("input");
             serialInput.type = "text";
             serialInput.className = "pcf-input pcf-serial-input";
-            serialInput.placeholder = "Nº Serie";
+            serialInput.placeholder = this.t("PlaceholderSerial");
             serialInput.value = linea[this.LOGICAL_NAME_NUMERO_SERIE] || "";
             
             serialInput.onblur = () => {
-                const newVal = serialInput.value.trim();
-                const oldVal = linea[this.LOGICAL_NAME_NUMERO_SERIE] || "";
-                if (newVal !== oldVal) {
-                    serialInput.classList.add("saving");
-                    const data = { [this.LOGICAL_NAME_NUMERO_SERIE]: newVal };
-                    this._context.webAPI.updateRecord(this.LOGICAL_NAME_LINEA_ENTIDAD, linea[this.LOGICAL_NAME_LINEA_ENTIDAD + "id"], data)
-                        .then(() => {
-                            serialInput.classList.remove("saving");
-                            serialInput.classList.add("saved");
-                            linea[this.LOGICAL_NAME_NUMERO_SERIE] = newVal; 
-                            setTimeout(() => serialInput.classList.remove("saved"), 1500);
-                        })
-                        .catch((e: any) => {
-                            serialInput.classList.remove("saving");
-                            serialInput.classList.add("error");
-                            console.error("Error actualizando Nº serie", e);
-                        });
-                }
+                this.updateLineField(linea, lineId, this.LOGICAL_NAME_NUMERO_SERIE, serialInput);
+            };
+
+            // 4. Ubicación Editable
+            const locationInput = document.createElement("input");
+            locationInput.type = "text";
+            locationInput.className = "pcf-input pcf-location-input";
+            locationInput.placeholder = this.t("PlaceholderLocation");
+            locationInput.value = linea[this.LOGICAL_NAME_UBICACION] || "";
+
+            locationInput.onblur = () => {
+                this.updateLineField(linea, lineId, this.LOGICAL_NAME_UBICACION, locationInput);
             };
 
             li.appendChild(numSpan);
             li.appendChild(nameInput);
             li.appendChild(estadoSpan);
             li.appendChild(serialInput);
+            li.appendChild(locationInput);
             list.appendChild(li);
         });
 
         this._rightPanel.appendChild(list);
     }
 
+    private updateLineField(linea: any, lineId: string, fieldLogicalName: string, inputElem: HTMLInputElement): void {
+        const newVal = inputElem.value.trim();
+        const oldVal = linea[fieldLogicalName] || "";
+        if (newVal !== oldVal) {
+            inputElem.classList.add("saving");
+            const data = { [fieldLogicalName]: newVal };
+            this._context.webAPI.updateRecord(this.LOGICAL_NAME_LINEA_ENTIDAD, lineId, data)
+                .then(() => {
+                    inputElem.classList.remove("saving");
+                    inputElem.classList.add("saved");
+                    linea[fieldLogicalName] = newVal;
+                    setTimeout(() => inputElem.classList.remove("saved"), 1500);
+                })
+                .catch((e: any) => {
+                    inputElem.classList.remove("saving");
+                    inputElem.classList.add("error");
+                    console.error(`Error actualizando ${fieldLogicalName}`, e);
+                });
+        }
+    }
+
     private createLines(baseText: string, countToCreate: number): void {
         if (!this._selectedProductId || countToCreate <= 0) return;
 
         if (!baseText || baseText.trim() === "") {
-            alert("Por favor, complete el Nombre base para poder crear líneas.");
+            alert(this.t("AlertMissingBaseName"));
             return;
         }
 
@@ -465,7 +705,7 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
             
         }).catch((error: any) => {
             console.error("Error al crear líneas", error);
-            alert("Error al crear líneas. Revisa la consola.");
+            alert(this.t("AlertErrorCreatingLines"));
         });
     }
 
@@ -480,7 +720,7 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
         const pageContext = (this._context as any).page;
         if (pageContext && pageContext.entityId) {
             formParameters["sec_proyectoid"] = pageContext.entityId;
-            formParameters["sec_proyectoidname"] = pageContext.primaryFieldValue || "Proyecto Actual";
+            formParameters["sec_proyectoidname"] = pageContext.primaryFieldValue || this.t("CurrentProjectFallback");
             formParameters["sec_proyectoidtype"] = pageContext.entityTypeName || "sec_proyecto";
         }
 

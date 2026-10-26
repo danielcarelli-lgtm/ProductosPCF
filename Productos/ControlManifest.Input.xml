@@ -1,10 +1,10 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <manifest>
-  <control namespace="sec" constructor="ProjectProductsManager" version="0.0.17" display-name-key="ProjectProductsManager" description-key="Gestor de Productos de Proyecto y sus Líneas" control-type="standard">
+  <control namespace="sec" constructor="ProjectProductsManager" version="0.0.19" display-name-key="ProjectProductsManager" description-key="ProjectProductsManager_Desc" control-type="standard">
     <data-set name="projectProductsDataset" display-name-key="Dataset_Display_Key">
     </data-set>
     
-    <property name="allowEdit" display-name-key="Permitir Edición" description-key="Mostrar botón para editar productos de proyecto" of-type="TwoOptions" usage="input" default-value="false" />
+    <property name="allowEdit" display-name-key="AllowEdit_Display_Key" description-key="AllowEdit_Desc_Key" of-type="TwoOptions" usage="input" default-value="false" />
     
     <feature-usage>
       <uses-feature name="WebAPI" required="true" />
@@ -12,6 +12,9 @@
     <resources>
       <code path="index.ts" order="1"/>
       <css path="css/ProjectProductsManager.css" order="1" />
+      <resx path="strings/ProjectProductsManager.1033.resx" version="1.0.0" />
+      <resx path="strings/ProjectProductsManager.1034.resx" version="1.0.0" />
+      <resx path="strings/ProjectProductsManager.2070.resx" version="1.0.0" />
     </resources>
   </control>
 </manifest>

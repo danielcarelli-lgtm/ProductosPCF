@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="ProjectProductsManager" xml:space="preserve"><value>ProjectProductsManager</value></data>
+  <data name="ProjectProductsManager_Desc" xml:space="preserve"><value>Gestor de Productos de Proyecto y sus Líneas</value></data>
+  <data name="Dataset_Display_Key" xml:space="preserve"><value>Productos de Proyecto</value></data>
+  <data name="AllowEdit_Display_Key" xml:space="preserve"><value>Permitir Edición</value></data>
+  <data name="AllowEdit_Desc_Key" xml:space="preserve"><value>Mostrar botón para editar productos de proyecto</value></data>
+  <data name="LeftPanelTitle" xml:space="preserve"><value>Productos de Proyecto</value></data>
+  <data name="BtnNew" xml:space="preserve"><value>+ Nuevo</value></data>
+  <data name="BtnNewTooltip" xml:space="preserve"><value>Crear nuevo Producto de Proyecto</value></data>
+  <data name="SortLabel" xml:space="preserve"><value>Ordenar:</value></data>
+  <data name="SortName" xml:space="preserve"><value>Nombre</value></data>
+  <data name="SortCreatedOn" xml:space="preserve"><value>Fecha creación</value></data>
+  <data name="SortPending" xml:space="preserve"><value>Pendientes</value></data>
+  <data name="NoName" xml:space="preserve"><value>Sin nombre</value></data>
+  <data name="EditTooltip" xml:space="preserve"><value>Editar Producto de Proyecto</value></data>
+  <data name="LinesCreatedBadge" xml:space="preserve"><value>Líneas creadas: {0} / Estimadas: {1}</value></data>
+  <data name="LoadingLines" xml:space="preserve"><value>Cargando líneas...</value></data>
+  <data name="SelectProductPrompt" xml:space="preserve"><value>Seleccione un producto para ver sus líneas.</value></data>
+  <data name="ErrorLoadingLines" xml:space="preserve"><value>Error al cargar las líneas.</value></data>
+  <data name="RightPanelTitle" xml:space="preserve"><value>Líneas de Producto Asociadas</value></data>
+  <data name="BaseNamePlaceholder" xml:space="preserve"><value>Nombre base (ej. Cámara)</value></data>
+  <data name="BtnCreateOne" xml:space="preserve"><value>Crear línea (1)</value></data>
+  <data name="BtnCreateMissing" xml:space="preserve"><value>Crear faltantes ({0})</value></data>
+  <data name="EstimatedReached" xml:space="preserve"><value>✓ Cantidad estimada alcanzada</value></data>
+  <data name="ColLineName" xml:space="preserve"><value>Línea de producto</value></data>
+  <data name="ColStatus" xml:space="preserve"><value>Estado</value></data>
+  <data name="ColSerial" xml:space="preserve"><value>Nº Serie</value></data>
+  <data name="ColLocation" xml:space="preserve"><value>Ubicación</value></data>
+  <data name="PlaceholderName" xml:space="preserve"><value>Nombre</value></data>
+  <data name="NoStatus" xml:space="preserve"><value>Sin estado</value></data>
+  <data name="PlaceholderSerial" xml:space="preserve"><value>Nº Serie</value></data>
+  <data name="PlaceholderLocation" xml:space="preserve"><value>Ubicación</value></data>
+  <data name="AlertMissingBaseName" xml:space="preserve"><value>Por favor, complete el Nombre base para poder crear líneas.</value></data>
+  <data name="AlertErrorCreatingLines" xml:space="preserve"><value>Error al crear líneas. Revisa la consola.</value></data>
+  <data name="CurrentProjectFallback" xml:space="preserve"><value>Proyecto Actual</value></data>
+</root>

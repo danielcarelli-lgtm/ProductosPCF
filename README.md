@@ -20,11 +20,12 @@ Este panel actúa como el menú maestro, mostrando todos los "Productos de Proye
   * 🟢 **Verde pálido:** Cantidad de líneas creadas igual a la estimada (Completado).
   * 🟡 **Amarillo ocre:** Se han creado más líneas de las estimadas (Excedido).
 * **Edición Directa (Configurable):** Cada tarjeta incluye un pequeño botón de edición (lápiz). Al pulsarlo, se abre el formulario nativo de edición de Dataverse en un modal centrado, permitiendo modificar el registro sin salir de la pantalla. (Esta función puede ser activada/desactivada por los administradores).
+* **Ordenación de productos:** La barra **Ordenar** permite organizar las tarjetas por nombre, fecha de creación o cantidad de líneas pendientes. Al pulsar de nuevo el criterio activo se invierte el sentido del orden. El orden inicial es nombre ascendente; fecha y pendientes, descendente.
 
 **Integración con Formularios de Creación Rápida:**
 * En la cabecera del panel izquierdo existe un botón **"+ Nuevo"**.
 * Este botón invoca de manera nativa el panel lateral de **Creación Rápida (Quick Create)** de Dataverse.
-* **Herencia inteligente:** Al abrirse, el formulario capta automáticamente el contexto del Proyecto actual donde está insertado el PCF y auto-completa el campo de búsqueda (`Lookup`) del proyecto, ahorrando al usuario tener que buscarlo manualmente.
+* **Herencia inteligente:** Si el control está abierto desde un registro de Proyecto, el formulario recibe el contexto y se completa el campo de búsqueda (`Lookup`) del proyecto, ahorrando al usuario tener que buscarlo manualmente.
 
 ---
 
@@ -45,7 +46,7 @@ Si el producto seleccionado aún no ha alcanzado su límite estimado de líneas,
 Las líneas creadas se listan en un formato de tabla estrictamente alineada, optimizada para ingreso rápido de información:
 * **Orden (Columna #):** Enumera las líneas mostradas de forma visual.
 * **Insignias de Estado (Colores Pastel):** El campo "Estado del producto" se convierte en una etiqueta visual cuyo color se genera mediante un algoritmo matemático (Hash) basado en el texto del estado. Esto garantiza que estados iguales tengan siempre el mismo color pastel, facilitando la lectura rápida.
-* **Edición en Línea (Inline Editing):** Los campos **Nombre** y **Nº de Serie** son cuadros de texto interactivos. El usuario puede escribir directamente sobre ellos.
+* **Edición en Línea (Inline Editing):** Los campos **Nombre**, **Nº de Serie** y **Ubicación** son cuadros de texto interactivos. El usuario puede escribir directamente sobre ellos.
 * **Autoguardado y Feedback Visual:** Al terminar de escribir y cambiar de campo (evento `onblur`), el componente envía la actualización a Dataverse automáticamente y en segundo plano. Los campos cambian de color para informar al usuario del proceso:
   * 🟡 *Fondo amarillo:* Guardando en progreso...
   * 🟢 *Fondo verde:* Guardado exitoso.
@@ -61,7 +62,20 @@ Al insertar el control en el formulario principal de Dataverse, los administrado
 | :--- | :--- | :--- | :--- |
 | **Permitir Edición** (`allowEdit`) | `TwoOptions` (Sí/No) | Habilita o deshabilita la aparición del icono del lápiz en las tarjetas del panel izquierdo, otorgando o quitando a los usuarios el poder de editar el registro padre desde el componente. | No |
 
+## 🌐 Idiomas
+
+La interfaz y los textos de configuración del control están localizados para inglés (Estados Unidos), español y portugués (Portugal). El idioma se selecciona según la configuración de idioma de Power Apps. Las traducciones se mantienen en `Productos/strings/ProjectProductsManager.<LCID>.resx` (1033, 1034 y 2070, respectivamente).
+
 ## 🛠 Arquitectura Técnica Subyacente
 * **Framework:** DOM estándar nativo de TypeScript / Microsoft PCF SDK. No requiere bibliotecas externas pesadas como React o Fluent UI.
 * **Interacciones de Datos:** Toda la manipulación de registros secundarios, conteos matemáticos (FetchXML con `aggregate=true`) y actualizaciones silenciosas operan directamente contra la `context.webAPI` de Power Apps.
 * **Navegación Nativa:** Utiliza `context.navigation.openForm` con la propiedad `useQuickCreateForm: true` para invocar diálogos estandarizados del ecosistema Dynamics/Power Apps, respetando reglas de negocio, scripts y plugins existentes.
+
+## 🧰 Compilación
+
+Instala las dependencias del proyecto y compila el control PCF:
+
+```bash
+npm install
+npm run build
+```
