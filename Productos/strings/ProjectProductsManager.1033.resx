@@ -56,6 +56,9 @@
   <data name="NoName" xml:space="preserve"><value>No name</value></data>
   <data name="EditTooltip" xml:space="preserve"><value>Edit Project Product</value></data>
   <data name="LinesCreatedBadge" xml:space="preserve"><value>Created lines: {0} / Estimated: {1}</value></data>
+  <data name="SummaryInstalled" xml:space="preserve"><value>Installed: {0}</value></data>
+  <data name="SummaryPending" xml:space="preserve"><value>Pending: {0}</value></data>
+  <data name="SummaryReturned" xml:space="preserve"><value>Return: {0}</value></data>
   <data name="LoadingLines" xml:space="preserve"><value>Loading lines...</value></data>
   <data name="SelectProductPrompt" xml:space="preserve"><value>Select a product to view its lines.</value></data>
   <data name="ErrorLoadingLines" xml:space="preserve"><value>Error loading lines.</value></data>
@@ -64,12 +67,16 @@
   <data name="BtnCreateOne" xml:space="preserve"><value>Create line (1)</value></data>
   <data name="BtnCreateMissing" xml:space="preserve"><value>Create missing ({0})</value></data>
   <data name="EstimatedReached" xml:space="preserve"><value>✓ Estimated quantity reached</value></data>
+  <data name="EstimatedExceeded" xml:space="preserve"><value>⚠ Estimated quantity exceeded (+{0})</value></data>
   <data name="ColLineName" xml:space="preserve"><value>Product Line</value></data>
   <data name="ColStatus" xml:space="preserve"><value>Status</value></data>
   <data name="ColSerial" xml:space="preserve"><value>Serial No.</value></data>
   <data name="ColLocation" xml:space="preserve"><value>Location</value></data>
   <data name="PlaceholderName" xml:space="preserve"><value>Name</value></data>
   <data name="NoStatus" xml:space="preserve"><value>No status</value></data>
+  <data name="StatusPending" xml:space="preserve"><value>Pending</value></data>
+  <data name="StatusInstalled" xml:space="preserve"><value>Installed</value></data>
+  <data name="StatusReturned" xml:space="preserve"><value>Return</value></data>
   <data name="PlaceholderSerial" xml:space="preserve"><value>Serial No.</value></data>
   <data name="PlaceholderLocation" xml:space="preserve"><value>Location</value></data>
   <data name="AlertMissingBaseName" xml:space="preserve"><value>Please fill in the Base name to create lines.</value></data>

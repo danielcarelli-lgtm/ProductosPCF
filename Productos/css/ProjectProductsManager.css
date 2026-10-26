@@ -1,9 +1,9 @@
-/* Altura acotada y overflow oculto en el contenedor principal para forzar scrolls independientes */
+/* Altura calculada dinámicamente hasta el borde inferior del navegador */
 .pcf-main-container {
     display: flex;
     width: 100%;
-    height: 620px;
-    max-height: 75vh;
+    height: calc(100vh - 220px);
+    min-height: 320px;
     overflow: hidden;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     position: relative; 
@@ -122,7 +122,7 @@
 .pcf-card {
     display: flex;
     flex-direction: column;
-    gap: 4px; 
+    gap: 5px; 
     border: 1px solid #dcdcdc; 
     border-radius: 6px;
     padding: 8px 12px; 
@@ -173,17 +173,77 @@
     color: #0078d4;
 }
 
+.pcf-card-badges-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
 .pcf-qty-badge { display: inline-block; align-self: flex-start; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
 .pcf-qty-badge.low { background-color: #fde7e9; color: #a4262c; }
 .pcf-qty-badge.exact { background-color: #dff6dd; color: #107c10; }
 .pcf-qty-badge.high { background-color: #fff4ce; color: #8a6d3b; }
-.pcf-card-num { font-size: 11px; color: #605e5c; }
+
+/* Resumen de estados en la tarjeta de producto */
+.pcf-status-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 1px;
+}
+
+.pcf-status-pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10.5px;
+    font-weight: 600;
+    border: 1px solid rgba(0,0,0,0.06);
+}
+
+/* Colores pastel para los 3 estados (Compartidos entre resumen y desplegable) */
+.status-pending {
+    background-color: #fff4ce;
+    color: #8a6d3b;
+}
+
+.status-installed {
+    background-color: #dff6dd;
+    color: #107c10;
+}
+
+.status-returned {
+    background-color: #fde7e9;
+    color: #a4262c;
+}
+
+.pcf-card-num { font-size: 11px; color: #605e5c; margin-top: 1px; }
 
 /* Panel Derecho */
 .pcf-right-title { margin-top: 0; margin-bottom: 18px; }
 .pcf-right-controls { display: flex; gap: 15px; align-items: center; margin-bottom: 16px; min-height: 36px; }
 .pcf-btns-container { display: flex; gap: 10px; align-items: center; }
-.pcf-success-msg { color: #107c10; font-weight: 600; font-size: 13px; background-color: #dff6dd; padding: 6px 12px; border-radius: 4px; }
+
+.pcf-success-msg {
+    color: #107c10;
+    font-weight: 600;
+    font-size: 13px;
+    background-color: #dff6dd;
+    padding: 6px 12px;
+    border-radius: 4px;
+    border: 1px solid #b7eab3;
+}
+
+.pcf-exceeded-msg {
+    color: #8a6d3b;
+    font-weight: 600;
+    font-size: 13px;
+    background-color: #fff4ce;
+    padding: 6px 12px;
+    border-radius: 4px;
+    border: 1px solid #ffeb99;
+}
 
 /* Inputs y Botones Globales */
 .pcf-input {
@@ -206,10 +266,10 @@
 .pcf-btn-secondary { background-color: #fff; color: #0078d4; border: 1px solid #0078d4; }
 .pcf-btn-secondary:hover { background-color: #f3f2f1; }
 
-/* Grid para Cabecera y Lista (5 columnas incluyendo Ubicación) */
+/* Grid para Cabecera y Lista (5 columnas incluyendo Estado desplegable y Ubicación) */
 .pcf-lines-header {
     display: grid;
-    grid-template-columns: 24px 1fr auto 130px 160px; 
+    grid-template-columns: 24px 1fr 125px 130px 160px; 
     gap: 10px;
     padding: 4px 6px 8px 6px;
     border-bottom: 2px solid #eaeaea;
@@ -222,7 +282,7 @@
 .pcf-lines-list { list-style-type: none; padding-left: 0; margin: 0; }
 .pcf-line-item {
     display: grid;
-    grid-template-columns: 24px 1fr auto 130px 160px;
+    grid-template-columns: 24px 1fr 125px 130px 160px;
     align-items: center;
     gap: 10px;
     padding: 4px 6px;
@@ -231,9 +291,48 @@
 .pcf-line-item:hover { background-color: #f8f8f8; }
 .pcf-line-num { font-size: 12px; color: #8a8886; font-weight: 600; text-align: center; }
 .pcf-line-name-input { font-weight: 500; }
-.pcf-estado-badge { padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; white-space: nowrap; border: 1px solid rgba(0,0,0,0.05); text-align: center; }
-.pcf-input.saving { background-color: #fff8e6; border-color: #ffb900; }
-.pcf-input.saved { background-color: #f2fff2; border-color: #107c10; }
-.pcf-input.error { background-color: #fde7e9; border-color: #a4262c; }
+
+/* Selector desplegable de Estado con colores pastel */
+.pcf-estado-select {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 11.5px;
+    font-weight: 600;
+    font-family: inherit;
+    border: 1px solid rgba(0,0,0,0.1);
+    cursor: pointer;
+    outline: none;
+    width: 100%;
+    box-sizing: border-box;
+    text-align: center;
+    transition: filter 0.2s, box-shadow 0.2s;
+}
+
+.pcf-estado-select:hover:not(:disabled) {
+    filter: brightness(0.96);
+}
+
+.pcf-estado-select:focus:not(:disabled) {
+    box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.25);
+}
+
+/* Estado bloqueado cuando está Instalado */
+.pcf-estado-select:disabled {
+    cursor: not-allowed;
+    opacity: 0.95;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+}
+
+.pcf-estado-select option {
+    background-color: #ffffff;
+    color: #201f1e;
+    font-weight: 500;
+}
+
+.pcf-input.saving, .pcf-estado-select.saving { background-color: #fff8e6; border-color: #ffb900; }
+.pcf-input.saved, .pcf-estado-select.saved { box-shadow: 0 0 0 2px #107c10; }
+.pcf-input.error, .pcf-estado-select.error { background-color: #fde7e9; border-color: #a4262c; }
 
 .pcf-version { position: absolute; bottom: 5px; right: 10px; font-size: 10px; color: #cccccc; pointer-events: none; z-index: 20; }

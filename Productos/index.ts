@@ -8,6 +8,13 @@ interface TranslationDictionary {
     [key: string]: string;
 }
 
+interface ProductStatusSummary {
+    total: number;
+    pending: number;
+    installed: number;
+    returned: number;
+}
+
 export class ProjectProductsManager implements ComponentFramework.StandardControl<IInputs, IOutputs> {
 
     private _context: ComponentFramework.Context<IInputs>;
@@ -15,12 +22,13 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
     private _leftPanel: HTMLDivElement;
     private _rightPanel: HTMLDivElement;
     private _versionElement: HTMLDivElement;
+    private _resizeHandler: () => void;
 
     // Estado 
     private _selectedProductId: string | null = null;
     private _selectedProductEstimatedQty: number = 0;
     private _currentLines: any[] = [];
-    private _productCounts: Record<string, number> = {};
+    private _productCounts: Record<string, ProductStatusSummary> = {};
     private _lastDatasetIds: string = "";
     
     // Estado de ordenación del panel izquierdo
@@ -29,7 +37,12 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
     
     private _currentBaseNameSuggestion: string = "";
     
-    private readonly VERSION = "v0.0.19";
+    private readonly VERSION = "v0.0.21";
+
+    // Valores del OptionSet sec_estadodelproducto
+    private readonly STATUS_PENDIENTE = 909540000;
+    private readonly STATUS_INSTALADO = 909540001;
+    private readonly STATUS_DEVOLUCION = 909540002;
 
     // Diccionario de respaldo por LCID (1034: es-ES, 2070: pt-PT, 1033: en-US)
     private readonly TRANSLATIONS: Record<number, TranslationDictionary> = {
@@ -44,6 +57,9 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
             NoName: "Sin nombre",
             EditTooltip: "Editar Producto de Proyecto",
             LinesCreatedBadge: "Líneas creadas: {0} / Estimadas: {1}",
+            SummaryInstalled: "Instalado: {0}",
+            SummaryPending: "Pendiente: {0}",
+            SummaryReturned: "Devolución: {0}",
             LoadingLines: "Cargando líneas...",
             SelectProductPrompt: "Seleccione un producto para ver sus líneas.",
             ErrorLoadingLines: "Error al cargar las líneas.",
@@ -52,12 +68,16 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
             BtnCreateOne: "Crear línea (1)",
             BtnCreateMissing: "Crear faltantes ({0})",
             EstimatedReached: "✓ Cantidad estimada alcanzada",
+            EstimatedExceeded: "⚠ Cantidad estimada superada (+{0})",
             ColLineName: "Línea de producto",
             ColStatus: "Estado",
             ColSerial: "Nº Serie",
             ColLocation: "Ubicación",
             PlaceholderName: "Nombre",
             NoStatus: "Sin estado",
+            StatusPending: "Pendiente",
+            StatusInstalled: "Instalado",
+            StatusReturned: "Devolución",
             PlaceholderSerial: "Nº Serie",
             PlaceholderLocation: "Ubicación",
             AlertMissingBaseName: "Por favor, complete el Nombre base para poder crear líneas.",
@@ -75,6 +95,9 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
             NoName: "Sem nome",
             EditTooltip: "Editar Produto de Projeto",
             LinesCreatedBadge: "Linhas criadas: {0} / Estimadas: {1}",
+            SummaryInstalled: "Instalado: {0}",
+            SummaryPending: "Pendente: {0}",
+            SummaryReturned: "Devolução: {0}",
             LoadingLines: "A carregar linhas...",
             SelectProductPrompt: "Selecione um produto para ver as suas linhas.",
             ErrorLoadingLines: "Erro ao carregar as linhas.",
@@ -83,12 +106,16 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
             BtnCreateOne: "Criar linha (1)",
             BtnCreateMissing: "Criar em falta ({0})",
             EstimatedReached: "✓ Quantidade estimada atingida",
+            EstimatedExceeded: "⚠ Quantidade estimada excedida (+{0})",
             ColLineName: "Linha de produto",
             ColStatus: "Estado",
             ColSerial: "Nº Série",
             ColLocation: "Localização",
             PlaceholderName: "Nome",
             NoStatus: "Sem estado",
+            StatusPending: "Pendente",
+            StatusInstalled: "Instalado",
+            StatusReturned: "Devolução",
             PlaceholderSerial: "Nº Série",
             PlaceholderLocation: "Localização",
             AlertMissingBaseName: "Por favor, preencha o Nome base para poder criar linhas.",
@@ -106,6 +133,9 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
             NoName: "No name",
             EditTooltip: "Edit Project Product",
             LinesCreatedBadge: "Created lines: {0} / Estimated: {1}",
+            SummaryInstalled: "Installed: {0}",
+            SummaryPending: "Pending: {0}",
+            SummaryReturned: "Return: {0}",
             LoadingLines: "Loading lines...",
             SelectProductPrompt: "Select a product to view its lines.",
             ErrorLoadingLines: "Error loading lines.",
@@ -114,12 +144,16 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
             BtnCreateOne: "Create line (1)",
             BtnCreateMissing: "Create missing ({0})",
             EstimatedReached: "✓ Estimated quantity reached",
+            EstimatedExceeded: "⚠ Estimated quantity exceeded (+{0})",
             ColLineName: "Product Line",
             ColStatus: "Status",
             ColSerial: "Serial No.",
             ColLocation: "Location",
             PlaceholderName: "Name",
             NoStatus: "No status",
+            StatusPending: "Pending",
+            StatusInstalled: "Installed",
+            StatusReturned: "Return",
             PlaceholderSerial: "Serial No.",
             PlaceholderLocation: "Location",
             AlertMissingBaseName: "Please fill in the Base name to create lines.",
@@ -180,6 +214,9 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
         this._context = context;
         this._container = container;
 
+        // Habilitar seguimiento de redimensionado del contenedor en Power Apps
+        this._context.mode.trackContainerResize(true);
+
         this._container.className = "pcf-main-container";
 
         this._leftPanel = document.createElement("div");
@@ -195,10 +232,30 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
         this._container.appendChild(this._leftPanel);
         this._container.appendChild(this._rightPanel);
         this._container.appendChild(this._versionElement);
+
+        this._resizeHandler = () => this.adjustContainerHeight();
+        window.addEventListener("resize", this._resizeHandler);
+        this.adjustContainerHeight();
+    }
+
+    private adjustContainerHeight(): void {
+        if (!this._container) return;
+
+        requestAnimationFrame(() => {
+            const rect = this._container.getBoundingClientRect();
+            if (rect.top > 0) {
+                // Calcula el espacio exacto desde el inicio del componente hasta el final de la ventana
+                const bottomPadding = 20;
+                const availableHeight = Math.max(320, window.innerHeight - rect.top - bottomPadding);
+                this._container.style.height = `${availableHeight}px`;
+            }
+        });
     }
 
     public updateView(context: ComponentFramework.Context<IInputs>): void {
         this._context = context;
+        this.adjustContainerHeight();
+
         const dataset = context.parameters.projectProductsDataset;
 
         if (dataset.loading) return;
@@ -221,12 +278,18 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
 
     private fetchCounts(dataset: ComponentFramework.PropertyTypes.DataSet): void {
         const ids = dataset.sortedRecordIds;
+        if (ids.length === 0) {
+            this.renderLeftPanel(dataset);
+            return;
+        }
+
         const valuesXml = ids.map(id => `<value>${id}</value>`).join('');
         
         const fetchXml = `
         <fetch aggregate="true">
           <entity name="${this.LOGICAL_NAME_LINEA_ENTIDAD}">
             <attribute name="${this.LOGICAL_NAME_LOOKUP_PRODUCTO}" alias="productid" groupby="true" />
+            <attribute name="${this.LOGICAL_NAME_ESTADO_PRODUCTO}" alias="status" groupby="true" />
             <attribute name="${this.LOGICAL_NAME_LINEA_ENTIDAD}id" alias="count" aggregate="count" />
             <filter type="and">
               <condition attribute="${this.LOGICAL_NAME_LOOKUP_PRODUCTO}" operator="in">
@@ -239,14 +302,25 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
 
         this._context.webAPI.retrieveMultipleRecords(this.LOGICAL_NAME_LINEA_ENTIDAD, "?fetchXml=" + encodeURIComponent(fetchXml))
             .then(response => {
-                const newCounts: Record<string, number> = {};
-                ids.forEach(id => newCounts[id] = 0); 
+                const newCounts: Record<string, ProductStatusSummary> = {};
+                ids.forEach(id => {
+                    newCounts[id] = { total: 0, pending: 0, installed: 0, returned: 0 };
+                });
 
                 response.entities.forEach(entity => {
                     const productId = entity["productid"] || entity[`_${this.LOGICAL_NAME_LOOKUP_PRODUCTO}_value`];
-                    const count = entity["count"];
-                    if (productId && count !== undefined) {
-                        newCounts[productId] = parseInt(count, 10);
+                    const statusVal = entity["status"] !== undefined && entity["status"] !== null ? parseInt(entity["status"], 10) : null;
+                    const count = entity["count"] !== undefined ? parseInt(entity["count"], 10) : 0;
+
+                    if (productId && newCounts[productId]) {
+                        newCounts[productId].total += count;
+                        if (statusVal === this.STATUS_INSTALADO) {
+                            newCounts[productId].installed += count;
+                        } else if (statusVal === this.STATUS_DEVOLUCION) {
+                            newCounts[productId].returned += count;
+                        } else {
+                            newCounts[productId].pending += count;
+                        }
                     }
                 });
 
@@ -294,8 +368,8 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
                 const estA = estAStr ? parseInt(estAStr as string, 10) : 0;
                 const estB = estBStr ? parseInt(estBStr as string, 10) : 0;
 
-                const creadasA = this._productCounts[idA] !== undefined ? this._productCounts[idA] : 0;
-                const creadasB = this._productCounts[idB] !== undefined ? this._productCounts[idB] : 0;
+                const creadasA = this._productCounts[idA] ? this._productCounts[idA].total : 0;
+                const creadasB = this._productCounts[idB] ? this._productCounts[idB].total : 0;
 
                 const pendingA = estA - creadasA;
                 const pendingB = estB - creadasB;
@@ -380,7 +454,8 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
             
             const cantidadEstimadaStr = record.getValue(this.LOGICAL_NAME_CANTIDAD_ESTIMADA);
             const cantidadEstimada = cantidadEstimadaStr ? parseInt(cantidadEstimadaStr as string, 10) : 0;
-            const cantidadCreada = this._productCounts[recordId] !== undefined ? this._productCounts[recordId] : 0;
+            const summary = this._productCounts[recordId] || { total: 0, pending: 0, installed: 0, returned: 0 };
+            const cantidadCreada = summary.total;
 
             const card = document.createElement("div");
             card.className = "pcf-card";
@@ -411,7 +486,11 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
                 cardHeader.appendChild(btnEdit);
             }
 
-            const cardQty = document.createElement("div");
+            // Fila de insignias: Conteo total
+            const badgesRow = document.createElement("div");
+            badgesRow.className = "pcf-card-badges-row";
+
+            const cardQty = document.createElement("span");
             cardQty.className = "pcf-qty-badge";
             cardQty.innerText = this.t("LinesCreatedBadge", cantidadCreada, cantidadEstimada);
             
@@ -422,13 +501,35 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
             } else {
                 cardQty.classList.add("high");
             }
+            badgesRow.appendChild(cardQty);
+
+            // Resumen de estados con colores pastel
+            const statusSummaryContainer = document.createElement("div");
+            statusSummaryContainer.className = "pcf-status-summary";
+
+            const pillInstalled = document.createElement("span");
+            pillInstalled.className = "pcf-status-pill status-installed";
+            pillInstalled.innerText = this.t("SummaryInstalled", summary.installed);
+
+            const pillPending = document.createElement("span");
+            pillPending.className = "pcf-status-pill status-pending";
+            pillPending.innerText = this.t("SummaryPending", summary.pending);
+
+            const pillReturned = document.createElement("span");
+            pillReturned.className = "pcf-status-pill status-returned";
+            pillReturned.innerText = this.t("SummaryReturned", summary.returned);
+
+            statusSummaryContainer.appendChild(pillInstalled);
+            statusSummaryContainer.appendChild(pillPending);
+            statusSummaryContainer.appendChild(pillReturned);
 
             const cardNum = document.createElement("div");
             cardNum.className = "pcf-card-num";
             cardNum.innerText = `${nombreAsociado} (#${numeroProducto})`;
 
             card.appendChild(cardHeader);
-            card.appendChild(cardQty);
+            card.appendChild(badgesRow);
+            card.appendChild(statusSummaryContainer);
             card.appendChild(cardNum);
 
             card.onclick = () => {
@@ -467,6 +568,15 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
                 this._rightPanel.innerHTML = this.t("ErrorLoadingLines");
             }
         );
+    }
+
+    private getStatusColorClass(statusValue: number | null): string {
+        if (statusValue === this.STATUS_INSTALADO) {
+            return "status-installed";
+        } else if (statusValue === this.STATUS_DEVOLUCION) {
+            return "status-returned";
+        }
+        return "status-pending";
     }
 
     private renderRightPanel(): void {
@@ -515,11 +625,16 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
             btnsContainer.appendChild(btnCreateAll);
 
             controlsDiv.appendChild(btnsContainer);
-        } else {
+        } else if (missing === 0) {
             const successMsg = document.createElement("span");
             successMsg.className = "pcf-success-msg";
             successMsg.innerText = this.t("EstimatedReached");
             controlsDiv.appendChild(successMsg);
+        } else {
+            const exceededMsg = document.createElement("span");
+            exceededMsg.className = "pcf-exceeded-msg";
+            exceededMsg.innerText = this.t("EstimatedExceeded", Math.abs(missing));
+            controlsDiv.appendChild(exceededMsg);
         }
 
         stickyRightHeader.appendChild(controlsDiv);
@@ -578,19 +693,62 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
                 this.updateLineField(linea, lineId, this.LOGICAL_NAME_NOMBRE_HIJO, nameInput);
             };
 
-            // 2. Estado
-            const estadoSpan = document.createElement("span");
-            estadoSpan.className = "pcf-estado-badge";
-            const estadoLabel = linea[`${this.LOGICAL_NAME_ESTADO_PRODUCTO}@OData.Community.Display.V1.FormattedValue`] || linea[this.LOGICAL_NAME_ESTADO_PRODUCTO] || this.t("NoStatus");
-            estadoSpan.innerText = estadoLabel;
-            
-            let hash = 0;
-            for (let i = 0; i < estadoLabel.length; i++) {
-                hash = estadoLabel.charCodeAt(i) + ((hash << 5) - hash);
+            // 2. Selector de Estado Editable con bloqueo cuando está Instalado
+            const rawStatus = linea[this.LOGICAL_NAME_ESTADO_PRODUCTO];
+            const currentStatus: number = rawStatus !== undefined && rawStatus !== null ? parseInt(rawStatus, 10) : this.STATUS_PENDIENTE;
+
+            const estadoSelect = document.createElement("select");
+            estadoSelect.className = `pcf-estado-select ${this.getStatusColorClass(currentStatus)}`;
+
+            // Si está Instalado, no se puede cambiar de estado
+            if (currentStatus === this.STATUS_INSTALADO) {
+                estadoSelect.disabled = true;
             }
-            const hue = Math.abs(hash % 360);
-            estadoSpan.style.backgroundColor = `hsl(${hue}, 70%, 90%)`;
-            estadoSpan.style.color = `hsl(${hue}, 80%, 30%)`;
+
+            const statusOptions = [
+                { value: this.STATUS_PENDIENTE, label: this.t("StatusPending") },
+                { value: this.STATUS_INSTALADO, label: this.t("StatusInstalled") },
+                { value: this.STATUS_DEVOLUCION, label: this.t("StatusReturned") }
+            ];
+
+            statusOptions.forEach(opt => {
+                const optionElem = document.createElement("option");
+                optionElem.value = opt.value.toString();
+                optionElem.innerText = opt.label;
+                if (opt.value === currentStatus) {
+                    optionElem.selected = true;
+                }
+                estadoSelect.appendChild(optionElem);
+            });
+
+            estadoSelect.onchange = () => {
+                const newStatus = parseInt(estadoSelect.value, 10);
+                estadoSelect.className = `pcf-estado-select ${this.getStatusColorClass(newStatus)} saving`;
+
+                const data = { [this.LOGICAL_NAME_ESTADO_PRODUCTO]: newStatus };
+                this._context.webAPI.updateRecord(this.LOGICAL_NAME_LINEA_ENTIDAD, lineId, data)
+                    .then(() => {
+                        linea[this.LOGICAL_NAME_ESTADO_PRODUCTO] = newStatus;
+                        estadoSelect.classList.remove("saving");
+                        estadoSelect.classList.add("saved");
+
+                        // Bloquear inmediatamente si pasa a estado Instalado
+                        if (newStatus === this.STATUS_INSTALADO) {
+                            estadoSelect.disabled = true;
+                        }
+
+                        setTimeout(() => estadoSelect.classList.remove("saved"), 1200);
+
+                        // Refrescar resumen de estados en las tarjetas de la izquierda
+                        const dataset = this._context.parameters.projectProductsDataset;
+                        this.fetchCounts(dataset);
+                    })
+                    .catch((e: any) => {
+                        estadoSelect.classList.remove("saving");
+                        estadoSelect.classList.add("error");
+                        console.error("Error actualizando estado de la línea", e);
+                    });
+            };
 
             // 3. Nº Serie Editable
             const serialInput = document.createElement("input");
@@ -616,7 +774,7 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
 
             li.appendChild(numSpan);
             li.appendChild(nameInput);
-            li.appendChild(estadoSpan);
+            li.appendChild(estadoSelect);
             li.appendChild(serialInput);
             li.appendChild(locationInput);
             list.appendChild(li);
@@ -692,6 +850,7 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
             const data: any = {};
             data[`${this.LOGICAL_NAME_LOOKUP_PRODUCTO}@odata.bind`] = `/${this.LOGICAL_NAME_ENTIDAD_PADRE_PLURAL}(${this._selectedProductId})`;
             data[this.LOGICAL_NAME_NOMBRE_HIJO] = `${prefix} ${currentNum}`;
+            data[this.LOGICAL_NAME_ESTADO_PRODUCTO] = this.STATUS_PENDIENTE;
             promises.push(this._context.webAPI.createRecord(this.LOGICAL_NAME_LINEA_ENTIDAD, data));
             currentNum++;
         }
@@ -757,5 +916,8 @@ export class ProjectProductsManager implements ComponentFramework.StandardContro
     }
 
     public destroy(): void {
+        if (this._resizeHandler) {
+            window.removeEventListener("resize", this._resizeHandler);
+        }
     }
 }
